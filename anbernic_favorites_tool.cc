@@ -12,7 +12,7 @@
  *   --shuffle     Shuffle the favorites list
  *   --help        Display this help message
  *
- * If FILE is not provided, the default "/mnt/data/misc/.favorites" is used.
+ * If FILE is not provided, the default "/mnt/data/misc/.favorite" is used.
  * The file is modified in-place; no backups are made. Use at your own risk!
  *
  * MIT License
@@ -152,13 +152,13 @@ void PrintUsage() {
             << "  --shuffle     Shuffle the favorites list\n"
             << "  --help        Display this help message\n"
             << "\nIf FILE is not provided, the default "
-               "\"/mnt/data/misc/.favorites\" is used.\n"
+               "\"/mnt/data/misc/.favorite\" is used.\n"
             << "The file is modified in-place; no backups are made. Use at "
                "your own risk!\n";
 }
 
 int main(int argc, char* argv[]) {
-  std::string file_path = "/mnt/data/misc/.favorites";
+  std::string file_path = "/mnt/data/misc/.favorite";
   Operation operation = Operation::kSort;
 
   for (int i = 1; i < argc; ++i) {

@@ -1,5 +1,5 @@
 CXX = arm-linux-gnueabihf-g++
-CXXFLAGS = -std=c++20 -Wall -Wextra -O2
+CXXFLAGS = -std=c++20 -Wall -Wextra -O2 -static
 TARGET = anbernic_favorites_tool
 SRCS = anbernic_favorites_tool.cc
 SCRIPTS = Shuffle\ favorites.sh Sort\ favorites.sh
