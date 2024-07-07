@@ -3,6 +3,9 @@ Tool for shuffling or sorting the favorites list on Anbernic consoles.
 Not affiliated with or endorsed by Anbernic.
 
 ## Install
+You will need a cross-compiler for ARM32. On Debian systems, you can run
+`sudo apt-get install g++-arm-linux-gnueabihf`.
+
 Run `make`. Unzip `anbernic_favorites_tool.zip` to your console's app folder.
 
 ## Favorites file format

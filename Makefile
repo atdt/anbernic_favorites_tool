@@ -1,4 +1,4 @@
-CXX = g++
+CXX = arm-linux-gnueabihf-g++
 CXXFLAGS = -std=c++20 -Wall -Wextra -O2
 TARGET = anbernic_favorites_tool
 SRCS = anbernic_favorites_tool.cc
