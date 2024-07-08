@@ -33,3 +33,17 @@ The location of the favorites file is `/mnt/data/misc/.favorite`.
 - The first line must be `Version=1`.
 - Subsequent lines are entries in the favorites list.
 - The last line is a [JAMCRC](https://reveng.sourceforge.io/crc-catalogue/all.htm#crc.cat.jamcrc) checksum computed over the above content, including the trailing newline.
+
+Example Python code:
+
+```python
+import struct
+import zlib
+
+data = b"Version=1\nApotris-v4.0.2GBA.zip:GBA:nul:3:1:0\n"
+crc = 0xffffffff - zlib.crc32(data, 0xffffffff)
+checksum = struct.pack('<I', crc)
+with open('foo', 'wb') as f:
+  f.write(data)
+  f.write(checksum)
+```
