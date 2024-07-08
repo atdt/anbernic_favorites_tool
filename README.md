@@ -1,5 +1,5 @@
 # anbernic_favorites_tool
-Tool for shuffling or sorting the favorites list on Anbernic consoles like the RG35XX-H.
+Tool for shuffling or sorting the favorites list on Linux-based Anbernic consoles like the RG35XX-H.
 
 Not affiliated with or endorsed by Anbernic.
 
@@ -26,6 +26,9 @@ sudo apt-get install g++-arm-linux-gnueabihf
 ```
 
 Then, to build the tool, simply run `make`.
+
+## Alternatives
+* [FavSort](https://github.com/Skeeve/FavSort)
 
 ## Favorites file format
 The location of the favorites file is `/mnt/data/misc/.favorite`.
