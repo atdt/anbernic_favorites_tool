@@ -14,11 +14,12 @@ Unzip [anbernic_favorites_tool.zip](https://github.com/atdt/anbernic_favorites_t
 unzip anbernic_favorites_tool.zip -d /path/to/SD/Roms/APPS
 ```
 
-Find 'Shuffle favorites' and 'Sort favorites' in the Apps menu.
-The scripts exit immediately and don't provide feedback.
+Find 'Shuffle favorites' and 'Sort favorites' under **App Center** > **APPS**.
+
+The scripts exit immediately without providing feedback.
 
 ## Build
-You will need a cross-compiler for armhf. On Debian systems, you can run:
+You will need a cross-compiler for 32-bit Arm (armhf). On Debian systems, you can run:
 
 ```sh
 sudo apt-get install g++-arm-linux-gnueabihf
@@ -34,7 +35,7 @@ The location of the favorites file is `/mnt/data/misc/.favorite`.
 - Subsequent lines are entries in the favorites list.
 - The last line is a [JAMCRC](https://reveng.sourceforge.io/crc-catalogue/all.htm#crc.cat.jamcrc) checksum computed over the above content, including the trailing newline.
 
-Example Python code:
+### Example Python code
 
 ```python
 import struct
