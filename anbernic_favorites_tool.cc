@@ -39,12 +39,13 @@
 
 #include <algorithm>
 #include <array>
-#include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <random>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -67,7 +68,7 @@ std::array<uint32_t, kCrcTableSize> GenerateCrc32Table() {
 
 // Compute CRC32/JAMCRC checksum.
 // JAMCRC is the standard CRC32 with the final bits inverted.
-uint32_t ComputeJamCrc(const std::string& data) {
+uint32_t ComputeJamCrc(const std::string &data) {
   static const std::array<uint32_t, kCrcTableSize> kCrc32Table =
       GenerateCrc32Table();
   uint32_t crc = 0;
@@ -77,12 +78,73 @@ uint32_t ComputeJamCrc(const std::string& data) {
   return crc;
 }
 
-void ShuffleOrSortFavorites(const std::string& file_path, Operation operation) {
+// Reads a CSV-like file of arcade name fixes and returns a mapping of arcade
+// titles to their proper names.
+std::map<std::string, std::string> ParseArcadeNameFixesCsv(
+    const std::string &file_path) {
+  std::ifstream file(file_path);
+  if (!file.is_open()) {
+    throw std::runtime_error("Failed to open file for reading: " + file_path);
+  }
+
+  std::map<std::string, std::string> result;
+  std::string line;
+
+  while (std::getline(file, line)) {
+    if (line.empty()) {
+      continue;
+    }
+
+    std::istringstream line_stream(line);
+    std::string key, field;
+    std::getline(line_stream, key, ',');
+
+    std::string last_value;
+    while (std::getline(line_stream, field, ',')) {
+      if (field.starts_with('"') && field.ends_with('"')) {
+        last_value = field.substr(1, field.size() - 2);  // Remove quotes
+      }
+    }
+
+    result[key] = last_value;
+  }
+
+  return result;
+}
+
+std::string RemoveFileExtension(const std::string &filename) {
+  auto pos = filename.find_last_of('.');
+  if (pos == std::string::npos) {
+    return filename;
+  }
+  return filename.substr(0, pos);
+}
+
+// GetSortKey returns the key used for sorting. By default, it uses the title
+// from the favorite file. If the title appears in the arcade name fixes file,
+// the corrected title from the fixes file is used instead.
+std::string GetSortKey(
+    const std::string &line,
+    const std::map<std::string, std::string> &arcade_titles) {
+  auto first_colon = line.find(':');
+  if (first_colon == std::string::npos) {
+    return line;
+  }
+
+  std::string key = line.substr(0, first_colon);
+  key = RemoveFileExtension(key);
+
+  auto it = arcade_titles.find(key);
+  if (it != arcade_titles.end()) {
+    return it->second;
+  }
+  return key;
+}
+
+void ShuffleOrSortFavorites(const std::string &file_path, Operation operation) {
   std::ifstream infile(file_path, std::ios::binary);
   if (!infile.is_open()) {
-    std::cerr << "Failed to open file for reading: " << file_path << " - "
-              << std::strerror(errno) << "\n";
-    std::exit(1);
+    throw std::runtime_error("Failed to open file for reading: " + file_path);
   }
 
   std::vector<std::string> lines;
@@ -90,8 +152,8 @@ void ShuffleOrSortFavorites(const std::string& file_path, Operation operation) {
 
   if (std::getline(infile, line)) {
     if (line != "Version=1") {
-      std::cerr << "Invalid file format: first line must be 'Version=1'\n";
-      std::exit(1);
+      throw std::runtime_error(
+          "Invalid file format: first line must be 'Version=1'");
     }
     while (std::getline(infile, line)) {
       lines.push_back(std::move(line));
@@ -99,23 +161,35 @@ void ShuffleOrSortFavorites(const std::string& file_path, Operation operation) {
   }
   infile.close();
 
-  if (lines.size() < 2) {
-    std::cerr << "File does not contain enough lines to process.\n";
-    std::exit(1);
+  if (!lines.empty()) {
+    lines.pop_back();  // Discard the checksum
   }
-  lines.pop_back();  // Discard the checksum
 
   if (operation == Operation::kShuffle) {
     std::random_device rd;
     std::mt19937 g(rd());
     std::shuffle(lines.begin(), lines.end(), g);
   } else {
-    std::sort(lines.begin(), lines.end());
+    std::map<std::string, std::string> arcade_titles;
+    try {
+      constexpr char kArcadePlusCsv[] = "/mnt/vendor/bin/arcade-plus.csv";
+      arcade_titles = ParseArcadeNameFixesCsv(kArcadePlusCsv);
+      std::cerr << "Info: Loaded " << arcade_titles.size()
+                << " arcade title fixes.\n";
+    } catch (const std::exception &e) {
+      std::cerr << "Warning: " << e.what()
+                << ". Not applying arcade title fixes.\n";
+    }
+    std::sort(lines.begin(), lines.end(),
+              [&arcade_titles](const std::string &a, const std::string &b) {
+                return GetSortKey(a, arcade_titles) <
+                       GetSortKey(b, arcade_titles);
+              });
   }
 
   // Update the index field in each processed line
   for (size_t i = 0; i < lines.size(); ++i) {
-    std::string& entry = lines[i];
+    std::string &entry = lines[i];
     size_t last_colon = entry.rfind(':');
     size_t second_last_colon = entry.rfind(':', last_colon - 1);
 
@@ -126,7 +200,7 @@ void ShuffleOrSortFavorites(const std::string& file_path, Operation operation) {
   }
 
   std::string output_content = "Version=1\n";
-  for (const auto& l : lines) {
+  for (const auto &l : lines) {
     output_content += l + "\n";
   }
 
@@ -135,14 +209,13 @@ void ShuffleOrSortFavorites(const std::string& file_path, Operation operation) {
 
   std::ofstream outfile(file_path, std::ios::binary);
   if (!outfile.is_open()) {
-    std::cerr << "Failed to open file for writing: " << file_path << " - "
-              << std::strerror(errno) << "\n";
-    std::exit(1);
+    throw std::runtime_error("Failed to open file for writing: " + file_path);
   }
 
   outfile << output_content;
-  outfile.write(reinterpret_cast<const char*>(&crc), sizeof(crc));
+  outfile.write(reinterpret_cast<const char *>(&crc), sizeof(crc));
   outfile.close();
+  std::cerr << "Info: Wrote " << lines.size() << " favorites.\n";
 }
 
 void PrintUsage() {
@@ -157,7 +230,7 @@ void PrintUsage() {
                "your own risk!\n";
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   std::string file_path = "/mnt/data/misc/.favorite";
   Operation operation = Operation::kSort;
 
@@ -175,6 +248,12 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  ShuffleOrSortFavorites(file_path, operation);
+  try {
+    ShuffleOrSortFavorites(file_path, operation);
+  } catch (const std::exception &e) {
+    std::cerr << "Error: " << e.what() << "\n";
+    return 1;
+  }
+
   return 0;
 }
